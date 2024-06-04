@@ -29,11 +29,21 @@ namespace SimpleCurrencyApp.classes
 
         private async Task<RatesDto> LoadRatesDataAsync()
         {
+            // Creates the get request 
             string url = $"{_baseUrl}/latest.json?app_id={_apiKey}";
-            HttpResponseMessage response = await _httpClient.GetAsync(url);
+
+			// Gets the response from the web service
+			HttpResponseMessage response = await _httpClient.GetAsync(url); 
+
+            // Throws an exception if the request was not sucessful
             response.EnsureSuccessStatusCode();
-            string responseBody = await response.Content.ReadAsStringAsync();
+
+			// Reads the response as a string (JSON format)
+			string responseBody = await response.Content.ReadAsStringAsync(); 
+
+            // Converts the JSON into an object, in this case RatesDto
             RatesDto result = JsonSerializer.Deserialize<RatesDto>(responseBody, _options) ?? new();
+
             return result;
         }
 
@@ -49,15 +59,24 @@ namespace SimpleCurrencyApp.classes
 
         public async Task<CurrencyConverter> LoadCurrencyDataAsync()
         {
-            RatesDto rates = await LoadRatesDataAsync();
-            Dictionary<string, string> currencyData = await LoadCurrencyInfoAsync();
+            // Both tasks are started in parallel
+			var ratesTask = LoadRatesDataAsync();
+            var currencyTask = LoadCurrencyInfoAsync();
+
+            // Both the tasks need to complete before processing can continue
+            var rates = await ratesTask;
+            var currencyData = await currencyTask;
+            
+            // Create the correct objects to return to the calling code
             Dictionary<string, Currency> currencies = new();
             foreach (var rate in rates.Rates) {
                 string currencyName = currencyData[rate.Key];
                 Currency currency = new(rate.Key, currencyName, rate.Value);
                 currencies.Add(rate.Key, currency);
             }
+
             CurrencyConverter converter = new(currencies);
+
             return converter;
         }
 
